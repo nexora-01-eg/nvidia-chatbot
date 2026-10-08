@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NEXUS // Cyberpunk Chat</title>
+<style>
+:root{
+  --black:#050507; --shadow:#0b0b10;
+  --gold:#d4af37; --creamy:#f5e6c8;
+  --red:#ff1f3d; --white:#f2f2f2; --blue:#38bdf8;
+  --glass:rgba(255,255,255,.06); --stroke:rgba(212,175,55,.35);
+}
+*{box-sizing:border-box;font-family:"Segoe UI",Tahoma,sans-serif}
+body{margin:0;min-height:100vh;color:var(--white);
+  background:radial-gradient(1000px 500px at 80% -10%,rgba(212,175,55,.18),transparent),
+  radial-gradient(800px 500px at 10% 110%,rgba(56,189,248,.12),transparent),
+  linear-gradient(180deg,#050507,#0b0b10 60%,#050507);}
+.wrap{max-width:900px;margin:0 auto;padding:24px}
+header{display:flex;align-items:center;justify-content:space-between;
+  background:var(--glass);border:1px solid var(--stroke);border-radius:18px;
+  padding:16px 20px;backdrop-filter:blur(18px);box-shadow:0 20px 60px rgba(0,0,0,.6)}
+h1{margin:0;font-size:22px;color:var(--creamy);letter-spacing:1px}
+h1 span{color:var(--gold)}
+.badge{font-size:12px;color:var(--black);background:linear-gradient(135deg,var(--gold),var(--creamy));
+  padding:6px 12px;border-radius:999px;font-weight:700}
+.panel{margin-top:16px;background:var(--glass);border:1px solid var(--stroke);
+  border-radius:18px;backdrop-filter:blur(18px);overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,.55)}
+.controls{display:flex;gap:10px;padding:14px;border-bottom:1px solid rgba(212,175,55,.2);flex-wrap:wrap}
+select,input[type=range]{background:rgba(0,0,0,.5);color:var(--creamy);border:1px solid var(--stroke);border-radius:10px;padding:8px}
+#chat{height:52vh;overflow:auto;padding:18px;display:flex;flex-direction:column;gap:12px}
+.msg{max-width:80%;padding:12px 14px;border-radius:14px;line-height:1.7;backdrop-filter:blur(14px)}
+.user{align-self:flex-start;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.25);color:var(--white)}
+.bot{align-self:flex-end;background:rgba(56,189,248,.12);border:1px solid rgba(56,189,248,.45);color:#dff3ff}
+.sys{align-self:center;background:rgba(255,31,61,.12);border:1px solid var(--red);color:#ffb3bc;font-size:13px}
+.bar{display:flex;gap:10px;padding:14px}
+#q{flex:1;background:rgba(0,0,0,.55);border:1px solid var(--stroke);border-radius:12px;color:var(--white);padding:12px}
+button{background:linear-gradient(135deg,var(--gold),#a67c1a);border:none;color:#111;font-weight:800;
+  border-radius:12px;padding:12px 20px;cursor:pointer}
+button.ghost{background:transparent;color:var(--creamy);border:1px solid var(--stroke)}
+.typing{color:var(--blue);font-size:13px}
+small{color:var(--creamy);opacity:.7}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header>
+  <h1>NEXUS <span>//</span> CYBERPUNK CHAT</h1>
+  <div class="badge">NVIDIA BUILD • FREE</div>
+</header>
+<div class="panel">
+  <div class="controls">
+    <select id="model">
+      <option value="deepseek-ai/deepseek-v3.1">deepseek-v3.1 (سريع)</option>
+      <option value="meta/llama-3.1-70b-instruct">llama-3.1-70b</option>
+      <option value="mistralai/mixtral-8x22b-instruct-v0.1">mixtral-8x22b</option>
+    </select>
+    <button class="ghost" id="clear">مسح الشات</button>
+    <small>ازرق = رد صحيح • ابيض = كلامك • احمر = مهم / خطأ</small>
+  </div>
+  <div id="chat"></div>
+  <div class="bar">
+    <input id="q" placeholder="اكتب سؤالك هنا...">
+    <button id="send">ابعت</button>
+  </div>
+</div>
+</div>
+<script>
+const chat=document.getElementById('chat'), q=document.getElementById('q');
+let hist=[{role:'system',content:'انت مساعد مفيد بترد بالعربي المصري المبسط.'}];
+function add(t,c){const d=document.createElement('div');d.className='msg '+c;d.textContent=t;chat.appendChild(d);chat.scrollTop=chat.scrollHeight;return d;}
+add('اهلا بيك في نسخة السايبر بانك ⚡ اسأل اي حاجة','bot');
+async function send(){
+  const v=q.value.trim(); if(!v) return; q.value='';
+  add(v,'user'); hist.push({role:'user',content:v});
+  const tp=add('بيفكر...','bot'); tp.classList.add('typing');
+  try{
+    const r=await fetch('/api/chat',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({model:document.getElementById('model').value,messages:hist,temperature:.6})});
+    const j=await r.json();
+    tp.remove();
+    if(j.error){add(j.error,'sys');return;}
+    const ans=j.choices[0].message.content;
+    add(ans,'bot'); hist.push({role:'assistant',content:ans});
+  }catch(e){tp.remove();add('خطأ في الاتصال بالسيرفر','sys');}
+}
+document.getElementById('send').onclick=send;
+q.onkeydown=e=>{if(e.key==='Enter')send();};
+document.getElementById('clear').onclick=()=>{chat.innerHTML='';hist=hist.slice(0,1);};
+</script>
+</body>
+</html>
